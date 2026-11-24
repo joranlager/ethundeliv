@@ -1,0 +1,42 @@
+name: Bygg og deploy til GitHub Pages
+
+on:
+  push:
+    branches: ["**"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Bygg nettstedet
+        run: |
+          test -f index.html || { echo "index.html mangler"; exit 1; }
+          mkdir -p _site
+          cp index.html _site/
+          touch _site/.nojekyll
+          echo "Bygget fra branch: ${GITHUB_REF_NAME} (${GITHUB_SHA::7})"
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
