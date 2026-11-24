@@ -132,7 +132,7 @@ input.name:focus{border-color:var(--accent2)}
 <canvas id="c"></canvas>
 
 <div id="topbar">
-  <div class="logo">🐾 Et hundeliv</div>
+  <div class="logo" id="logo" title="Trykk 4 ganger raskt for å laste appen helt på nytt">🐾 Et hundeliv</div>
   <div class="pill" id="lvl">Nivå <b>1</b> · Valpepasser</div>
   <div class="pill" id="dogname"></div>
   <div class="spacer"></div>
@@ -1399,6 +1399,28 @@ function loop(){
   else if(G.player&&!$('bubble').classList.contains('hidden')){const pr=project(G.player.worldHead().add(new THREE.Vector3(.25,.45,0)));$('bubble').style.left=pr.x+'px';$('bubble').style.top=pr.y+'px';}
   renderer.render(scene,camera);
   if(first){first=false;$('loading').classList.add('hidden');}
+}
+/* Firedobbelt trykk på logoet: hard refresh (forbi nettleserens hurtigbuffer). Lagret fremgang beholdes. */
+{
+  const taps=[];
+  $('logo').style.cursor='pointer';
+  $('logo').addEventListener('pointerdown',async e=>{
+    e.preventDefault();
+    const now=performance.now();taps.push(now);
+    while(taps.length&&now-taps[0]>1500)taps.shift();
+    if(taps.length<4)return;
+    taps.length=0;
+    G.save();
+    toast('Laster appen på nytt… 🔄');
+    try{
+      if('serviceWorker' in navigator)for(const r of await navigator.serviceWorker.getRegistrations())await r.unregister();
+      if(window.caches)for(const k of await caches.keys())await caches.delete(k);
+    }catch{}
+    const u=new URL(location.href);u.searchParams.set('r',Date.now().toString(36));
+    location.replace(u.toString());
+  });
+  // fjern cache-buster fra adressen etter innlasting
+  const u=new URL(location.href);if(u.searchParams.has('r')){u.searchParams.delete('r');history.replaceState(null,'',u.toString());}
 }
 G.init();
 loop();
